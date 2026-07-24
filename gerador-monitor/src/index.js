@@ -29,10 +29,11 @@ function agendarProximoCiclo(deps) {
     }, INTERVALO_MS);
 }
 
-function main() {
+async function main() {
     const pool = criarPool();
     const deps = { pool, lerGeradorCompleto, insertLeitura, insertFalha };
     console.log(`[WORKER] Iniciando coleta a cada ${INTERVALO_MS}ms (gateway ${config.ip}:${config.porta}, slave ${config.slaveId})`);
+    await executarCiclo(deps);
     agendarProximoCiclo(deps);
 }
 

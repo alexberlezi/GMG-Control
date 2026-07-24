@@ -253,7 +253,7 @@ export const resetUserPassword = withPermission('users:manage', async (session, 
   if (!user) return { success: false, error: 'Usuário não encontrado' };
 
   const token = await createVerificationToken({ email: user.email, type: 'PASSWORD_RESET', userId: user.id });
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'localhost:3000';
+  const appUrl = process.env.APP_URL || 'localhost:3000';
   const resetLink = `http${appUrl.includes('localhost') ? '' : 's'}://${appUrl}/auth/reset-password?token=${token}`;
 
   await sendEmail({

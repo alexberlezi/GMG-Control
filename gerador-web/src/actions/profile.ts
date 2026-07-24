@@ -36,7 +36,7 @@ export const updateProfile = withAuth(async (session, data: { name: string; emai
         userId: session.user.id
       });
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const appUrl = process.env.APP_URL || 'http://localhost:3000';
       const verifyLink = `http${appUrl.includes('localhost') ? '' : 's'}://${appUrl}/auth/verify-email?token=${token}`;
 
       // Envia email para o novo endereço com o link de confirmação

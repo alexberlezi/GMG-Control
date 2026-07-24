@@ -85,7 +85,7 @@ export const createInvite = withPermission('users:manage', async (session, email
       }
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
     const inviteLink = `http${appUrl.includes('localhost') ? '' : 's'}://${appUrl}/invite/${inviteToken}`;
 
     const html = `
@@ -139,7 +139,7 @@ export const resendInvite = withPermission('users:manage', async (session, id: s
       return { success: false, error: 'Convite não encontrado ou não está mais pendente.' };
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
     const inviteLink = `http${appUrl.includes('localhost') ? '' : 's'}://${appUrl}/invite/${invite.token}`;
 
     const html = `

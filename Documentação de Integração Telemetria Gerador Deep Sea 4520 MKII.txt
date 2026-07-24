@@ -1,0 +1,153 @@
+1. Visão Geral da Arquitetura
+O objetivo deste módulo (Worker) é extrair dados de telemetria de um grupo gerador com painel DSE 4520 MKII.
+A comunicação não é direta com a placa, mas sim através de um Gateway DSE 890. O gateway atua como uma ponte transparente recebendo requisições Modbus TCP na porta 502 e roteando internamente para a conexão USB do painel.
+
+Parâmetros de Conexão:
+
+IP do Gateway: 10.40.10.111
+
+Porta: 502 (Modbus TCP)
+
+Slave ID (IMPORTANTE): O painel responde estritamente pelo ID Modbus SCADA 10. Requisições para o ID 1 serão descartadas ou causarão timeout.
+
+2. Particularidades do Mapa de Memória (Gotchas)
+O mapa de registradores (padrão Gencomm) sofreu customizações do montador (Stemac/Deep Sea). Para evitar lixo de memória ou estouro de buffer, a equipe deve observar as seguintes regras já tratadas no script:
+
+Sensores Ausentes: Sensores analógicos não instalados no bloco do motor (como Temperatura ou Pressão do Óleo de contato seco) retornam o valor máximo de 16-bits: 32767 ou 65535. O script deve tratar isso salvando como null no banco de dados.
+
+Blocos de 32-bits (Tensões do Gerador): Ocupam dois registradores. A leitura deve ser tratada como Big-Endian (readUInt32BE).
+
+Blocos de 16-bits (Acumulados de Energia e Rede): Diferente da documentação padrão, este firmware armazena a potência gerada (kWh, kVAh, kvarh) em registradores simples de 16-bits.
+
+Status da Concessionária: Não há um registrador booleano confiável para a presença da rede. A lógica implementada verifica se as tensões L1 e L2 estão acima de 100V.
+
+3. Setup do Ambiente
+A equipe precisará inicializar um projeto Node.js e instalar a biblioteca responsável pelo protocolo Modbus:
+
+
+npm init -y
+npm install modbus-serial
+
+4. Código-Fonte (Worker de Coleta)
+Crie um arquivo chamado worker-gerador.js. O script abaixo já está componentizado para retornar um objeto JSON limpo. A equipe precisará apenas encapsular a chamada da função lerGeradorCompleto() em um setInterval e adicionar a lógica de INSERT no banco de dados PostgreSQL (utilizando Prisma, Knex ou pg nativo).
+
+
+const ModbusRTU = require("modbus-serial");
+
+// Configurações de Rede
+const IP_GERADOR = "10.40.10.111";
+const PORTA = 502;
+const SLAVE_ID = 10; 
+
+/**
+ * Função principal para leitura e decodificação do mapa Modbus DSE 4520 MKII
+ * Retorna um objeto JSON estruturado pronto para inserção no banco de dados.
+ */
+async function lerGeradorCompleto() {
+    const client = new ModbusRTU();
+    
+    try {
+        // Timeout de 3s para evitar travamento da thread caso o gateway caia
+        client.setTimeout(3000);
+        await client.connectTCP(IP_GERADOR, { port: PORTA });
+        client.setID(SLAVE_ID);
+        
+        // 1. MODO DE OPERAÇÃO (Endereço 768)
+        const regStatus = await client.readHoldingRegisters(768, 1);
+        const codModo = regStatus.data[0];
+        let modoOperacao = "Desconhecido";
+        if (codModo === 0) modoOperacao = "Parado (Stop)";
+        if (codModo === 1) modoOperacao = "Automático";
+        if (codModo === 2) modoOperacao = "Manual";
+        if (codModo === 3) modoOperacao = "Teste";
+
+        // 2. DADOS DO MOTOR (Endereços 1024 a 1029)
+        const regMotor = await client.readHoldingRegisters(1024, 6);
+        let rpmMotor = regMotor.data[0]; 
+        if (rpmMotor === 65535) rpmMotor = 0; 
+        
+        let temperatura = regMotor.data[2];
+        // Tratamento para falta de sensor analógico (retorna null para o DB)
+        let temperaturaC = (temperatura === 32767 || temperatura === 65535) ? null : temperatura;
+        
+        let combustivel = regMotor.data[3]; 
+        if (combustivel === 65535) combustivel = 0;
+
+        const tensaoBateria = regMotor.data[5] / 10; 
+
+        // 3. TENSÃO DA REDE / CONCESSIONÁRIA (Endereços 1061 a 1065)
+        const regRede = await client.readHoldingRegisters(1061, 5);
+        const redeL1 = regRede.data[0] / 10;
+        const redeL2 = regRede.data[2] / 10;
+        const redeL3 = regRede.data[4] / 10;
+        const statusRede = (redeL1 > 100 && redeL2 > 100) ? "Rede OK" : "FALHA NA REDE";
+
+        // 4. DADOS DE GERAÇÃO / ALTERNADOR (Endereços 1536 a 1547) - Leitura em 32-bits (Big Endian)
+        const regGerador = await client.readHoldingRegisters(1536, 12);
+        const genVoltsL1 = regGerador.buffer.readUInt32BE(0) / 10;
+        const genVoltsL2 = regGerador.buffer.readUInt32BE(4) / 10;
+        const genVoltsL3 = regGerador.buffer.readUInt32BE(8) / 10;
+        const genAmpL1 = regGerador.buffer.readUInt32BE(12) / 10;
+        const genAmpL2 = regGerador.buffer.readUInt32BE(16) / 10;
+        const genAmpL3 = regGerador.buffer.readUInt32BE(20) / 10;
+
+        // 5. ESTATÍSTICAS E ENERGIA ACUMULADA (Endereços 1799 a 1809) - Leitura em 16-bits
+        const regStats = await client.readHoldingRegisters(1799, 11);
+        const freqRede = regStats.data[0] / 100;
+        const energiaKwh = regStats.data[2] / 10;   
+        const energiaKvah = regStats.data[6] / 10;  
+        const energiaKvarh = regStats.data[8] / 10; 
+        const numPartidas = regStats.data[10];      
+
+        // Objeto de Retorno
+        const telemetria = {
+            timestamp: new Date().toISOString(),
+            geral: {
+                modo_operacao: modoOperacao,
+                status_concessionaria: statusRede
+            },
+            motor: {
+                status: rpmMotor > 0 ? "Rodando" : "Parado",
+                rpm: rpmMotor,
+                temperatura_c: temperaturaC,
+                bateria_v: tensaoBateria,
+                combustivel_pct: combustivel
+            },
+            rede: {
+                freq_hz: freqRede,
+                volts_l1: redeL1,
+                volts_l2: redeL2,
+                volts_l3: redeL3
+            },
+            gerador: {
+                volts_l1: genVoltsL1,
+                volts_l2: genVoltsL2,
+                volts_l3: genVoltsL3,
+                amps_l1: genAmpL1,
+                amps_l2: genAmpL2,
+                amps_l3: genAmpL3,
+                partidas: numPartidas,
+                energia_kwh: energiaKwh,
+                energia_kvarh: energiaKvarh,
+                energia_kvah: energiaKvah
+            }
+        };
+
+        return telemetria;
+
+    } catch (erro) {
+        console.error(`[WORKER MODBUS] Erro de Comunicação: ${erro.message}`);
+        throw erro;
+    } finally {
+        // Encerra a conexão TCP para não esgotar as sessões do gateway
+        client.close();
+    }
+}
+
+// Exemplo de uso para a equipe:
+// async function iniciarColeta() {
+//     const dados = await lerGeradorCompleto();
+//     console.log(JSON.stringify(dados, null, 2));
+//     // AQUI VAI A LÓGICA DE INSERT NO POSTGRESQL
+// }
+// iniciarColeta();

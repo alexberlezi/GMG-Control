@@ -1,3 +1,5 @@
+const ModbusRTU = require("modbus-serial");
+
 function decodificarTelemetria({ regStatus, regMotor, regRede, regGerador, regStats }, agora = new Date()) {
     const codModo = regStatus.data[0];
     let modoOperacao = "Desconhecido";
@@ -61,4 +63,25 @@ function decodificarTelemetria({ regStatus, regMotor, regRede, regGerador, regSt
     };
 }
 
-module.exports = { decodificarTelemetria };
+async function lerRegistradoresBrutos(client) {
+    const regStatus = await client.readHoldingRegisters(768, 1);
+    const regMotor = await client.readHoldingRegisters(1024, 6);
+    const regRede = await client.readHoldingRegisters(1061, 5);
+    const regGerador = await client.readHoldingRegisters(1536, 12);
+    const regStats = await client.readHoldingRegisters(1799, 11);
+    return { regStatus, regMotor, regRede, regGerador, regStats };
+}
+
+async function lerGeradorCompleto(config, client = new ModbusRTU()) {
+    try {
+        client.setTimeout(3000);
+        await client.connectTCP(config.ip, { port: config.porta });
+        client.setID(config.slaveId);
+        const blocos = await lerRegistradoresBrutos(client);
+        return decodificarTelemetria(blocos);
+    } finally {
+        client.close();
+    }
+}
+
+module.exports = { decodificarTelemetria, lerRegistradoresBrutos, lerGeradorCompleto };

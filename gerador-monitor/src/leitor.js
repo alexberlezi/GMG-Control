@@ -1,6 +1,6 @@
 const ModbusRTU = require("modbus-serial");
 
-function decodificarTelemetria({ regStatus, regMotor, regRede, regGerador, regStats }, agora = new Date()) {
+function decodificarTelemetria({ regStatus, regMotor, regRede, regGerador, regStats, regFrequencia }, agora = new Date()) {
     const codModo = regStatus.data[0];
     let modoOperacao = "Desconhecido";
     if (codModo === 0) modoOperacao = "Parado (Stop)";
@@ -14,7 +14,10 @@ function decodificarTelemetria({ regStatus, regMotor, regRede, regGerador, regSt
     let rpmMotor = regMotor.data[6];
     if (rpmMotor === 65535) rpmMotor = 0;
 
-    const temperatura = regMotor.data[2];
+    // regMotor.data[1] (endereço 1025), não data[2] (1026): validado contra o valor real
+    // (56°C) mostrado no sistema de operação remota do gerador — 1026 sempre retorna 32767
+    // (esse sim é um sensor realmente ausente, provavelmente pressão de óleo).
+    const temperatura = regMotor.data[1];
     const temperaturaC = (temperatura === 32767 || temperatura === 65535) ? null : temperatura;
 
     let combustivel = regMotor.data[3];
@@ -34,7 +37,10 @@ function decodificarTelemetria({ regStatus, regMotor, regRede, regGerador, regSt
     const genAmpL2 = regGerador.buffer.readUInt32BE(16) / 10;
     const genAmpL3 = regGerador.buffer.readUInt32BE(20) / 10;
 
-    const freqRede = regStats.data[0] / 100;
+    // regFrequencia (endereço 1059, /10), não regStats.data[0] (1799, /100): validado contra
+    // o valor real (60,00 Hz fixo) mostrado no sistema de operação remota do gerador — 1799
+    // subia continuamente e depois travava (comportamento de contador, não de frequência).
+    const freqRede = regFrequencia.data[0] / 10;
     const energiaKwh = regStats.data[2] / 10;
     const energiaKvah = regStats.data[6] / 10;
     const energiaKvarh = regStats.data[8] / 10;
@@ -72,10 +78,13 @@ async function lerRegistradoresBrutos(client) {
     // da posição real da chave. Também documento errado para este DSE.
     const regStatus = await client.readHoldingRegisters(772, 1);
     const regMotor = await client.readHoldingRegisters(1024, 7);
+    // Endereço 1059: frequência real da rede — descoberto por varredura, fora do bloco
+    // de estatísticas (1799) que o documento original indicava.
+    const regFrequencia = await client.readHoldingRegisters(1059, 1);
     const regRede = await client.readHoldingRegisters(1061, 5);
     const regGerador = await client.readHoldingRegisters(1536, 12);
     const regStats = await client.readHoldingRegisters(1799, 11);
-    return { regStatus, regMotor, regRede, regGerador, regStats };
+    return { regStatus, regMotor, regFrequencia, regRede, regGerador, regStats };
 }
 
 async function lerGeradorCompleto(config, client = new ModbusRTU()) {

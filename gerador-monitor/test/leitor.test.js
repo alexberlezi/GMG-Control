@@ -14,7 +14,8 @@ function blocosPadrao(overrides = {}) {
 
     return {
         regStatus: { data: [1] },                                   // Automático
-        regMotor: { data: [65535, 0, 75, 80, 0, 135, 1500] },        // (sem sensor), _, temp, comb, _, bateria*10, rpm real (1030)
+        regMotor: { data: [65535, 75, 32767, 80, 0, 135, 1500] },    // (sem sensor), temp real (1025), (sem sensor), comb, _, bateria*10, rpm real (1030)
+        regFrequencia: { data: [600] },                              // 60.0 Hz (1059, /10)
         regRede: { data: [1270, 0, 1270, 0, 1270] },                 // L1,_,L2,_,L3 (x10)
         regGerador: { buffer },
         regStats: { data: [6000, 0, 1200, 0, 0, 0, 500, 0, 300, 0, 42] },
@@ -45,26 +46,26 @@ test('decodifica uma leitura normal com todos os sensores presentes', () => {
 });
 
 test('sensor de temperatura ausente (32767) vira null', () => {
-    const blocos = blocosPadrao({ regMotor: { data: [65535, 0, 32767, 80, 0, 135, 1500] } });
+    const blocos = blocosPadrao({ regMotor: { data: [65535, 32767, 32767, 80, 0, 135, 1500] } });
     const telemetria = decodificarTelemetria(blocos);
     assert.strictEqual(telemetria.temperatura_c, null);
 });
 
 test('sensor de temperatura ausente (65535) vira null', () => {
-    const blocos = blocosPadrao({ regMotor: { data: [65535, 0, 65535, 80, 0, 135, 1500] } });
+    const blocos = blocosPadrao({ regMotor: { data: [65535, 65535, 32767, 80, 0, 135, 1500] } });
     const telemetria = decodificarTelemetria(blocos);
     assert.strictEqual(telemetria.temperatura_c, null);
 });
 
 test('rpm 65535 (sem leitura) vira 0 e status motor Parado', () => {
-    const blocos = blocosPadrao({ regMotor: { data: [65535, 0, 75, 80, 0, 135, 65535] } });
+    const blocos = blocosPadrao({ regMotor: { data: [65535, 75, 32767, 80, 0, 135, 65535] } });
     const telemetria = decodificarTelemetria(blocos);
     assert.strictEqual(telemetria.rpm, 0);
     assert.strictEqual(telemetria.motor_status, 'Parado');
 });
 
 test('combustivel 65535 (sem leitura) vira 0', () => {
-    const blocos = blocosPadrao({ regMotor: { data: [65535, 0, 75, 65535, 0, 135, 1500] } });
+    const blocos = blocosPadrao({ regMotor: { data: [65535, 75, 32767, 65535, 0, 135, 1500] } });
     const telemetria = decodificarTelemetria(blocos);
     assert.strictEqual(telemetria.combustivel_pct, 0);
 });
@@ -98,24 +99,27 @@ function clientFake(respostasPorEndereco, { falharEm } = {}) {
 
 const respostasValidas = {
     772: { data: [1] },
-    1024: { data: [65535, 0, 75, 80, 0, 135, 1500] },
+    1024: { data: [65535, 75, 32767, 80, 0, 135, 1500] },
+    1059: { data: [600] },
     1061: { data: [1270, 0, 1270, 0, 1270] },
     1536: { buffer: Buffer.alloc(24) },
     1799: { data: [6000, 0, 1200, 0, 0, 0, 500, 0, 300, 0, 42] }
 };
 
-test('lerRegistradoresBrutos lê os 5 blocos nos endereços corretos', async () => {
+test('lerRegistradoresBrutos lê os 6 blocos nos endereços corretos', async () => {
     const client = clientFake(respostasValidas);
 
     const blocos = await lerRegistradoresBrutos(client);
 
-    assert.strictEqual(client.readHoldingRegisters.mock.calls.length, 5);
+    assert.strictEqual(client.readHoldingRegisters.mock.calls.length, 6);
     assert.deepStrictEqual(client.readHoldingRegisters.mock.calls[0].arguments, [772, 1]);
     assert.deepStrictEqual(client.readHoldingRegisters.mock.calls[1].arguments, [1024, 7]);
-    assert.deepStrictEqual(client.readHoldingRegisters.mock.calls[2].arguments, [1061, 5]);
-    assert.deepStrictEqual(client.readHoldingRegisters.mock.calls[3].arguments, [1536, 12]);
-    assert.deepStrictEqual(client.readHoldingRegisters.mock.calls[4].arguments, [1799, 11]);
+    assert.deepStrictEqual(client.readHoldingRegisters.mock.calls[2].arguments, [1059, 1]);
+    assert.deepStrictEqual(client.readHoldingRegisters.mock.calls[3].arguments, [1061, 5]);
+    assert.deepStrictEqual(client.readHoldingRegisters.mock.calls[4].arguments, [1536, 12]);
+    assert.deepStrictEqual(client.readHoldingRegisters.mock.calls[5].arguments, [1799, 11]);
     assert.strictEqual(blocos.regStatus, respostasValidas[772]);
+    assert.strictEqual(blocos.regFrequencia, respostasValidas[1059]);
     assert.strictEqual(blocos.regGerador, respostasValidas[1536]);
 });
 

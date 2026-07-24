@@ -10,7 +10,7 @@ export type InviteWithDetails = {
   id: string;
   email: string;
   roleId: string;
-  invitedBy: string;
+  invitedBy: string | null;
   status: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED';
   token: string;
   expiresAt: Date;
@@ -28,7 +28,7 @@ export const getInvites = withPermission('users:read', async (session): Promise<
       }
     });
 
-    const userIds = [...new Set(invites.map(i => i.invitedBy))];
+    const userIds = [...new Set(invites.map(i => i.invitedBy).filter((id): id is string => id !== null))];
     const users = await db.user.findMany({
       where: { id: { in: userIds } },
       select: { id: true, name: true }
@@ -38,7 +38,7 @@ export const getInvites = withPermission('users:read', async (session): Promise<
 
     return invites.map(invite => ({
       ...invite,
-      inviter: userMap.get(invite.invitedBy) || { name: 'Desconhecido' }
+      inviter: (invite.invitedBy ? userMap.get(invite.invitedBy) : undefined) || { name: 'Desconhecido' }
     })) as InviteWithDetails[];
   } catch (error) {
     console.error('Error fetching invites:', error);

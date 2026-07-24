@@ -8,7 +8,10 @@ function decodificarTelemetria({ regStatus, regMotor, regRede, regGerador, regSt
     if (codModo === 2) modoOperacao = "Manual";
     if (codModo === 3) modoOperacao = "Teste";
 
-    let rpmMotor = regMotor.data[0];
+    // regMotor.data[6] (endereço 1030), não data[0] (1024): validado com o motor rodando de
+    // verdade — 1024 sempre retorna 65535 (sem captador de RPM instalado), 1030 acompanhou o
+    // painel físico (1800 RPM). O endereço do documento de integração está errado para este DSE.
+    let rpmMotor = regMotor.data[6];
     if (rpmMotor === 65535) rpmMotor = 0;
 
     const temperatura = regMotor.data[2];
@@ -64,8 +67,11 @@ function decodificarTelemetria({ regStatus, regMotor, regRede, regGerador, regSt
 }
 
 async function lerRegistradoresBrutos(client) {
-    const regStatus = await client.readHoldingRegisters(768, 1);
-    const regMotor = await client.readHoldingRegisters(1024, 6);
+    // Endereço 772, não 768: validado trocando a chave física para Manual e conferindo o
+    // valor retornado (2 = Manual) contra o painel — 768 ficava travado em 1 independente
+    // da posição real da chave. Também documento errado para este DSE.
+    const regStatus = await client.readHoldingRegisters(772, 1);
+    const regMotor = await client.readHoldingRegisters(1024, 7);
     const regRede = await client.readHoldingRegisters(1061, 5);
     const regGerador = await client.readHoldingRegisters(1536, 12);
     const regStats = await client.readHoldingRegisters(1799, 11);

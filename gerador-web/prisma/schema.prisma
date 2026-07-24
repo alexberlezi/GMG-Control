@@ -1,0 +1,450 @@
+// prisma/schema.prisma
+// AuthForge — Schema Single-Tenant
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ═══════════════════════════════════════
+// USERS & AUTH
+// ═══════════════════════════════════════
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  firstName     String?
+  lastName      String?
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  avatarUrl     String?
+  locale        String    @default("pt-BR")
+  timezone      String    @default("America/Sao_Paulo")
+  phone         String?
+  authProvider  String    @default("local") // "local" | "ldap" | "oauth"
+  ldapDn        String?   // Distinguished Name from LDAP/AD
+  isOwner       Boolean   @default(false)
+  mustChangePassword Boolean @default(false)
+  passwordLastChangedAt DateTime @default(now())
+
+  // 2FA (TOTP)
+  twoFactorSecret      String?
+  twoFactorEnabled     Boolean @default(false)
+  twoFactorLastCounter Int     @default(0)
+  encryptionKeyVersion Int     @default(1)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roles       UserRole[]
+  sessions    Session[]
+  accounts    OAuthAccount[]
+  tokens      VerificationToken[]
+  backupCodes BackupCode[]
+  auditLogs   AuditLog[]
+  notifications Notification[]
+  loginAttempts LoginAttempt[]
+  invitesSent Invite[] @relation("InvitesSent")
+
+  @@index([email])
+  @@index([ldapDn])
+}
+
+// ═══════════════════════════════════════
+// BACKUP CODES (2FA Recovery)
+// ═══════════════════════════════════════
+
+model BackupCode {
+  id       String    @id @default(cuid())
+  userId   String
+  prefix   String
+  codeHash String
+  usedAt   DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([prefix])
+}
+
+// ═══════════════════════════════════════
+// OAUTH ACCOUNTS
+// ═══════════════════════════════════════
+
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  userId            String
+  provider          String   // "google" | "github" | "microsoft" | "facebook"
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         Int?
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+// ═══════════════════════════════════════
+// SESSIONS (Opaque Tokens — ADR-001)
+// ═══════════════════════════════════════
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique  // SHA-256 hash of raw token
+  ipAddress    String?
+  location     String?
+  userAgent    String?
+  deviceName   String?
+  deviceType   String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ═══════════════════════════════════════
+// VERIFICATION TOKENS (JWTs stored for single-use)
+// ═══════════════════════════════════════
+
+model VerificationToken {
+  id        String                @id @default(cuid())
+  userId    String?
+  email     String
+  token     String                @unique
+  type      VerificationTokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime              @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([email, type])
+  @@index([expiresAt])
+}
+
+enum VerificationTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  MAGIC_LINK
+  OTP_CODE
+  EMAIL_CHANGE
+  INVITE
+}
+
+// ═══════════════════════════════════════
+// RBAC (Dynamic Roles & Permissions)
+// ═══════════════════════════════════════
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isDefault   Boolean  @default(false)
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       UserRole[]
+  invites     Invite[]
+
+  @@index([name])
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  resource    String
+  action      String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roles RolePermission[]
+
+  @@unique([resource, action])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  assignedAt   DateTime @default(now())
+  assignedBy   String?
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  id       String   @id @default(cuid())
+  userId   String
+  roleId   String
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, roleId])
+  @@index([userId])
+}
+
+// ═══════════════════════════════════════
+// INVITES
+// ═══════════════════════════════════════
+
+model Invite {
+  id        String       @id @default(cuid())
+  email     String
+  roleId    String
+  invitedBy String?
+  status    InviteStatus @default(PENDING)
+  token     String       @unique
+  expiresAt DateTime
+  createdAt DateTime     @default(now())
+
+  role      Role         @relation(fields: [roleId], references: [id])
+  invitedByUser User?    @relation("InvitesSent", fields: [invitedBy], references: [id], onDelete: SetNull)
+
+  @@index([token])
+  @@index([email])
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+// ═══════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  resource  String?
+  metadata  Json?
+  ipAddress String?
+  location  String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([action])
+}
+
+// ═══════════════════════════════════════
+// LOGIN ATTEMPTS (Security Analytics)
+// ═══════════════════════════════════════
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String
+  method    String   // "password" | "magic_link" | "otp" | "oauth" | "ldap"
+  success   Boolean
+  ipAddress String?
+  userAgent String?
+  failReason String? // "invalid_password" | "locked" | "rate_limited" | "turnstile_failed" | "2fa_failed"
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+  @@index([userId])
+}
+
+// ═══════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  link      String?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  DANGER
+}
+
+// ═══════════════════════════════════════
+// AUTH CONFIG (Single Record)
+// ═══════════════════════════════════════
+
+model AuthConfig {
+  id String @id @default(cuid())
+
+  // Auth methods
+  emailPasswordEnabled Boolean @default(true)
+  magicLinkEnabled     Boolean @default(false)
+  otpEnabled           Boolean @default(false)
+  twoFactorRequired    Boolean @default(false)
+  registrationEnabled  Boolean @default(true)
+
+  // OAuth
+  googleEnabled        Boolean @default(false)
+  googleClientId       String?
+  googleClientSecret   String?
+  githubEnabled        Boolean @default(false)
+  githubClientId       String?
+  githubClientSecret   String?
+  microsoftEnabled     Boolean @default(false)
+  microsoftClientId    String?
+  microsoftClientSecret String?
+  facebookEnabled      Boolean @default(false)
+  facebookClientId     String?
+  facebookClientSecret String?
+
+  // LDAP / Active Directory
+  ldapEnabled          Boolean @default(false)
+  ldapUrl              String?
+  ldapBaseDn           String?
+  ldapBindDn           String?
+  ldapBindPassword     String?
+  ldapSearchFilter     String? @default("(sAMAccountName={{username}})")
+  ldapTlsEnabled       Boolean @default(true)
+  ldapTlsAllowSelfSigned Boolean @default(false)
+  ldapCaCert           String? @db.Text
+  ldapSyncEnabled      Boolean @default(false)
+  ldapSyncInterval     Int     @default(3600)
+  ldapUserMapping      Json?
+  ldapLastSyncAt       DateTime?
+  ldapFallbackToLocal  Boolean @default(true)
+
+  // Security
+  sessionMaxAge        Int     @default(2592000) // 30 days
+  maxLoginAttempts     Int     @default(5)
+  lockoutDuration      Int     @default(900) // 15 min
+  passwordMinLength    Int     @default(8)
+  requireUppercase     Boolean @default(true)
+  requireNumber        Boolean @default(true)
+  requireSpecialChar   Boolean @default(false)
+  passwordExpirationEnabled Boolean @default(false)
+  passwordExpirationDays    Int     @default(90)
+
+  // Turnstile (ADR-002)
+  turnstileEnabled     Boolean @default(false)
+  turnstileSiteKey     String?
+  turnstileSecretKey   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════
+// THEME CONFIG
+// ═══════════════════════════════════════
+
+model ThemeConfig {
+  id              String @id @default(cuid())
+  primaryColor    String @default("#3B82F6")
+  secondaryColor  String @default("#22C55E")
+  accentColor     String @default("#0EA5E9")
+
+  // Branding
+  projectName     String @default("AuthForge")
+  companyName     String?
+  companyCnpj     String?
+  companyEmail    String?
+  companyPhone    String?
+  logoLightUrl    String?
+  logoDarkUrl     String?
+  faviconUrl      String?
+
+  // Login Layout
+  loginLayout         String @default("centered") // "centered" | "split" | "minimal"
+  defaultTheme        String @default("dark")     // "light" | "dark"
+
+  // Login Texts (Split Layout)
+  loginPillText       String? @default("Bem-vindo ao Sistema")
+  loginTitleText      String? @default("Acesso centralizado para a sua organização.")
+  loginSubtitleText   String? @default("Plataforma corporativa de autenticação e gestão de acessos com segurança avançada.")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════
+// EMAIL CONFIG
+// ═══════════════════════════════════════
+
+model EmailConfig {
+  id       String @id @default(cuid())
+  provider String @default("resend") // "resend" | "smtp"
+
+  // Resend
+  apiKey   String?
+
+  // SMTP
+  smtpHost String?
+  smtpPort Int?
+  smtpUser String?
+  smtpPass String?
+
+  fromEmail String @default("noreply@authforge.dev")
+  fromName  String? @default("AuthForge")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════
+// SYSTEM CONFIG (KV Store)
+// ═══════════════════════════════════════
+
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════
+// RATE LIMITING
+// ═══════════════════════════════════════
+
+model RateLimit {
+  key       String   @id
+  points    Int      @default(0)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

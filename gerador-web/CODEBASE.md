@@ -76,6 +76,7 @@ Todas dependem de sessão ativa (verificada pelo `proxy.ts`).
 | `audit.ts` | Helper `logAudit()` para Event Sourcing |
 | `permissions.ts` | Guard Code do RBAC: `can(userId, resource, action)` |
 | `email.ts` | Gateway de envio unificado (SMTP/Resend) |
+| `gerador-db.ts` | Pool `pg` somente leitura para o banco de telemetria do gerador (`leituras`, `falhas_coleta`) — separado do Prisma |
 
 ### `lib/auth/` — Módulos de Autenticação
 | Arquivo | Responsabilidade |
@@ -89,6 +90,13 @@ Todas dependem de sessão ativa (verificada pelo `proxy.ts`).
 | `rate-limit.ts` | Rate limiting por IP e por e-mail |
 | `turnstile.ts` | Verificação Cloudflare Turnstile |
 | `validations.ts` | Validação de políticas de senha |
+
+---
+
+### `scripts/` — Utilitários de linha de comando (gerador-web)
+| Arquivo | Responsabilidade |
+|---------|-----------------|
+| `check-gerador-db.ts` | Verificação manual de conectividade com o banco de telemetria |
 
 ---
 

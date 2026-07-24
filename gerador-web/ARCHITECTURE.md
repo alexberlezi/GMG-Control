@@ -112,6 +112,20 @@ O `proxy.ts` atua como **optimistic check de UX**:
 
 ## 7. Deploy
 
-- **Docker Standalone**: Next.js standalone output + multi-stage Dockerfile
+- **Docker (gerador-web)**: multi-stage Dockerfile com `node_modules` completo copiado entre
+  estágios (não usa `output: 'standalone'`) — mais simples de manter, evita as particularidades
+  de rastreamento de arquivos do modo standalone. O `docker-entrypoint.sh` roda
+  `prisma migrate deploy` antes de iniciar o servidor Next.js a cada subida do container.
 - **Vercel**: Deploy direto com env vars no painel
 - **Banco**: PostgreSQL (recomendado) ou MySQL/MariaDB via Prisma
+
+---
+
+## 8. Integração com a Telemetria do Gerador (gerador-web)
+
+- Banco de telemetria (`leituras`, `falhas_coleta`) é populado pelo worker `gerador-monitor`,
+  externo a este app — este app nunca escreve nele.
+- Leitura via `src/lib/gerador-db.ts`: `pg.Pool` dedicado, configurado por
+  `GERADOR_DB_HOST/PORT/NAME/USER/PASSWORD`, completamente separado do `db.ts` (Prisma) usado
+  para os dados próprios deste app.
+- Verificação manual de conectividade: `npx tsx scripts/check-gerador-db.ts`.

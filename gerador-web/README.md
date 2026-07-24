@@ -47,6 +47,23 @@ AuthForge é um sistema de gerenciamento de identidade e acessos (Identity and A
 
 ---
 
+## Sobre este projeto (gerador-web)
+
+Este projeto é uma cópia do starter kit [AuthForge](../../../Authforge) (auth, RBAC, audit log
+prontos), estendida para operar como o sistema web do gerador Deep Sea 4520 MKII: dashboard de
+telemetria, registro de manutenções e relatórios. É o segundo dos dois sub-projetos do
+repositório `Gerador` — o primeiro é o `gerador-monitor` (worker de coleta de telemetria).
+
+Duas conexões de banco distintas:
+- `DATABASE_URL` — banco próprio deste app (usuários, permissões, manutenções), via Prisma.
+- `GERADOR_DB_*` — banco de telemetria já existente (`leituras`, `falhas_coleta`), somente
+  leitura, via `pg.Pool` direto (`src/lib/gerador-db.ts`), sem Prisma.
+
+Deploy: `docker compose up -d --build` (ver `docker-compose.yml`) — sobe este app e seu banco
+próprio (`postgres-web`) na mesma VM onde já rodam o `gerador-monitor` e o TimescaleDB.
+
+---
+
 ## Configuração Local (Desenvolvimento)
 
 ### 1. Dependências

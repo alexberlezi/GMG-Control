@@ -1,16 +1,18 @@
 {
   "name": "gerador-monitor",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Worker de coleta de telemetria do gerador Deep Sea 4520 MKII",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js",
+    "test": "node --test \"test/*.test.js\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "modbus-serial": "^8.0.25"
+    "modbus-serial": "^8.0.25",
+    "pg": "^8.13.1"
   }
 }

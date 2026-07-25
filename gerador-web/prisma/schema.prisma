@@ -50,6 +50,7 @@ model User {
   notifications Notification[]
   loginAttempts LoginAttempt[]
   invitesSent Invite[] @relation("InvitesSent")
+  manutencoesRegistradas RegistroManutencao[]
 
   @@index([email])
   @@index([ldapDn])
@@ -447,4 +448,48 @@ model RateLimit {
   expiresAt DateTime
 
   @@index([expiresAt])
+}
+
+// ═══════════════════════════════════════
+// MANUTENÇÃO
+// ═══════════════════════════════════════
+
+enum TipoManutencao {
+  ABASTECIMENTO
+  TROCA_OLEO
+  ADITIVO
+  BATERIA
+  LIMPEZA
+  DEFEITO_AVARIA
+  OUTRO
+}
+
+model RegistroManutencao {
+  id            String         @id @default(cuid())
+  tipo          TipoManutencao
+  dataHora      DateTime
+  responsavelId String?
+  quantidade    Decimal?
+  unidadeMedida String?
+  custo         Decimal?
+  observacoes   String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  responsavel User?             @relation(fields: [responsavelId], references: [id], onDelete: SetNull)
+  anexos      AnexoManutencao[]
+
+  @@index([dataHora])
+  @@index([tipo])
+}
+
+model AnexoManutencao {
+  id                   String   @id @default(cuid())
+  registroManutencaoId String
+  caminhoArquivo       String
+  createdAt            DateTime @default(now())
+
+  registroManutencao RegistroManutencao @relation(fields: [registroManutencaoId], references: [id], onDelete: Cascade)
+
+  @@index([registroManutencaoId])
 }

@@ -1,8 +1,8 @@
 import { db } from '@/lib/db';
 import { validateSession } from '@/lib/auth/session';
 import { can } from '@/lib/permissions';
-import { getUltimaLeitura, getHistoricoGerador } from '@/lib/gerador-db';
-import { Users, ShieldCheck, Activity, Globe, Zap, Wrench, AlertTriangle, CheckCircle } from 'lucide-react';
+import { getUltimaLeitura } from '@/lib/gerador-db';
+import { Users, ShieldCheck, Activity, Globe, Zap, Wrench, ServerCrash } from 'lucide-react';
 import { GeradorStatusCards } from '@/components/dashboard/gerador/gerador-status-cards';
 
 export default async function DashboardPage() {
@@ -26,6 +26,7 @@ export default async function DashboardPage() {
   // Fetch generator and maintenance data if user has permission
   let geradorData = null;
   let manutencaoData = null;
+  let geradorError = false;
   const hasGeneratorAccess = await can(session.user.id, 'generator', 'read');
 
   if (hasGeneratorAccess) {
@@ -43,6 +44,7 @@ export default async function DashboardPage() {
       manutencaoData = ultimasManutencoes;
     } catch (error) {
       console.error('Erro ao buscar dados do gerador:', error);
+      geradorError = true;
     }
   }
 
@@ -80,6 +82,18 @@ export default async function DashboardPage() {
       </div>
 
       {/* Generator Section */}
+      {hasGeneratorAccess && geradorError && (
+        <div className="alert alert-error">
+          <ServerCrash size={20} className="shrink-0" />
+          <div>
+            <p className="font-medium">Não foi possível conectar ao banco de telemetria.</p>
+            <p className="text-sm opacity-80 mt-1">
+              Verifique se o serviço de coleta e o banco de dados do gerador estão acessíveis.
+            </p>
+          </div>
+        </div>
+      )}
+
       {hasGeneratorAccess && geradorData && (
         <div>
           <div className="mb-4">
@@ -106,8 +120,9 @@ export default async function DashboardPage() {
               <div key={manutencao.id} className="px-5 py-4 hover:bg-surface-container-low/50 transition-colors">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-on-surface">
-                      🔧 {manutencao.tipo.replace(/_/g, ' ')}
+                    <p className="text-sm font-medium text-on-surface flex items-center gap-1.5">
+                      <Wrench size={14} className="text-primary shrink-0" />
+                      {manutencao.tipo.replace(/_/g, ' ')}
                     </p>
                     {manutencao.observacoes && (
                       <p className="text-xs text-on-surface-variant mt-1 line-clamp-2">{manutencao.observacoes}</p>

@@ -113,7 +113,7 @@ export function ManutencaoClient({ initialRegistros }: { initialRegistros: Regis
                       <button onClick={() => setEditingRegistro(r)} className="btn-icon"><Edit2 size={16} /></button>
                     )}
                     {can('maintenance', 'delete') && (
-                      <button onClick={() => setDeletingRegistro(r)} className="btn-icon-danger"><Trash2 size={16} /></button>
+                      <button onClick={() => setDeletingRegistro(r)} className="btn-icon btn-icon-danger"><Trash2 size={16} /></button>
                     )}
                   </div>
                 </td>

@@ -9,7 +9,10 @@ import { RoleMembersModal } from './role-members-modal';
 const RESOURCE_LABELS: Record<string, string> = {
   '*': 'Acesso Global (Todos os Módulos)',
   'audit_logs': 'Auditoria (Logs)',
+  'generator': 'Gerador — Dashboard e Manutenções',
   'invites': 'Convites',
+  'maintenance': 'Manutenções do Gerador',
+  'reports': 'Relatórios do Gerador',
   'roles': 'Grupos e Permissões',
   'sessions': 'Sessões Ativas',
   'settings': 'Configurações Globais',

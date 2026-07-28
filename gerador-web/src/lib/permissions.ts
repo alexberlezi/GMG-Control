@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 
 type Resource = string;
-type Action = 'create' | 'read' | 'update' | 'delete' | 'manage' | 'invite' | '*';
+type Action = 'create' | 'read' | 'update' | 'delete' | 'manage' | 'invite' | 'export' | '*';
 
 const MANAGE_INCLUDES: Action[] = ['create', 'read', 'update', 'delete'];
 

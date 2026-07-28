@@ -81,6 +81,11 @@ export const AuditAction = {
   INVITE_ACCEPT: 'invites.accept',
   INVITE_CANCEL: 'invites.cancel',
 
+  // Maintenance
+  MAINTENANCE_CREATE: 'maintenance.create',
+  MAINTENANCE_UPDATE: 'maintenance.update',
+  MAINTENANCE_DELETE: 'maintenance.delete',
+
   // Settings
   SETTINGS_UPDATE: 'settings.update',
   AUTH_CONFIG_UPDATE: 'settings.auth_config.update',

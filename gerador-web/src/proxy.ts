@@ -19,7 +19,6 @@ const SECURITY_HEADERS = {
   'X-Frame-Options': 'DENY',
   'X-XSS-Protection': '1; mode=block',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
 };
 
@@ -84,6 +83,23 @@ export async function proxy(request: NextRequest) {
 
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(key, value);
+  }
+
+  // HSTS only makes sense over a real HTTPS connection — sending it over
+  // plain HTTP (e.g. local dev, or before a reverse proxy adds TLS) tells
+  // the browser to refuse http:// for this origin for up to 2 years,
+  // breaking every subsequent request until the browser's HSTS cache for
+  // the host is manually cleared. `x-forwarded-proto` covers the case
+  // where a reverse proxy (e.g. Nginx Proxy Manager) terminates TLS in
+  // front of this app.
+  const isHttps =
+    request.nextUrl.protocol === 'https:' ||
+    requestHeaders.get('x-forwarded-proto') === 'https';
+  if (isHttps) {
+    response.headers.set(
+      'Strict-Transport-Security',
+      'max-age=63072000; includeSubDomains'
+    );
   }
 
   // Public routes — no auth required

@@ -219,15 +219,20 @@ function ManutencaoModal({
       anexoPaths: newAnexoPaths,
     };
 
-    const result = isEditing
-      ? await updateManutencao(registro!.id, payload)
-      : await createManutencao(payload);
+    try {
+      const result = isEditing
+        ? await updateManutencao(registro!.id, payload)
+        : await createManutencao(payload);
 
-    if (result.success) {
-      toast.success(isEditing ? 'Manutenção atualizada!' : 'Manutenção registrada!');
-      onSaved(result.registro);
-    } else {
-      setError(result.error || 'Erro ao salvar manutenção');
+      if (result.success) {
+        toast.success(isEditing ? 'Manutenção atualizada!' : 'Manutenção registrada!');
+        onSaved(result.registro);
+      } else {
+        setError(result.error || 'Erro ao salvar manutenção');
+        setLoading(false);
+      }
+    } catch (err) {
+      setError('Erro inesperado ao salvar manutenção. Tente novamente.');
       setLoading(false);
     }
   }
@@ -336,11 +341,16 @@ function DeleteManutencaoModal({
   async function handleDelete() {
     setLoading(true);
     setError('');
-    const result = await deleteManutencao(registro.id);
-    if (result.success) {
-      onSuccess();
-    } else {
-      setError(result.error || 'Erro ao excluir manutenção');
+    try {
+      const result = await deleteManutencao(registro.id);
+      if (result.success) {
+        onSuccess();
+      } else {
+        setError(result.error || 'Erro ao excluir manutenção');
+        setLoading(false);
+      }
+    } catch (err) {
+      setError('Erro inesperado ao excluir manutenção. Tente novamente.');
       setLoading(false);
     }
   }
@@ -360,7 +370,7 @@ function DeleteManutencaoModal({
 
         <div className="flex gap-3">
           <button type="button" onClick={onClose} className="btn btn-ghost flex-1">Cancelar</button>
-          <button type="button" onClick={handleDelete} disabled={loading} className="btn flex-1 bg-red-500 hover:bg-red-600 text-white gap-1.5">
+          <button type="button" onClick={handleDelete} disabled={loading} className="btn btn-danger flex-1 gap-1.5">
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
             Excluir
           </button>

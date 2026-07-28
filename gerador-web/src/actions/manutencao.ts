@@ -112,6 +112,11 @@ export const updateManutencao = withPermission('maintenance:update', async (sess
     return { success: false, error: 'Data/hora é obrigatória.' };
   }
 
+  const existing = await db.registroManutencao.findUnique({ where: { id } });
+  if (!existing) {
+    return { success: false, error: 'Registro não encontrado.' };
+  }
+
   const registro = await db.registroManutencao.update({
     where: { id },
     data: {

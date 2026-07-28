@@ -66,6 +66,7 @@ Todas dependem de sessão ativa (verificada pelo `proxy.ts`).
 | `setup.ts` | Setup Wizard (criação do owner) |
 | `upload.ts` | Upload de arquivos (logos, avatares) |
 | `audit.ts` | Consultas de auditoria |
+| `manutencao.ts` | CRUD de registros de manutenção do gerador + upload de anexos |
 
 ---
 

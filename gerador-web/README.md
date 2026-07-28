@@ -54,6 +54,13 @@ prontos), estendida para operar como o sistema web do gerador Deep Sea 4520 MKII
 telemetria, registro de manutenções e relatórios. É o segundo dos dois sub-projetos do
 repositório `Gerador` — o primeiro é o `gerador-monitor` (worker de coleta de telemetria).
 
+### Manutenções do gerador
+
+Rota `/dashboard/manutencao` (permissão `generator:read` para ver, `maintenance:create` /
+`maintenance:update` / `maintenance:delete` para as ações de escrita) — CRUD de registros de
+manutenção (abastecimento, troca de óleo, aditivo, bateria, limpeza, defeitos/avarias), com
+upload de fotos/comprovantes em `public/uploads/manutencoes/`.
+
 Duas conexões de banco distintas:
 - `DATABASE_URL` — banco próprio deste app (usuários, permissões, manutenções), via Prisma.
 - `GERADOR_DB_*` — banco de telemetria já existente (`leituras`, `falhas_coleta`), somente

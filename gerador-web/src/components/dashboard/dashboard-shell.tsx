@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, ShieldCheck, Mail as MailIcon, Activity,
   Settings, UserCircle, Bell, Menu, X, LogOut, Moon, Sun,
-  Key, Globe, Lock, ChevronDown, Gauge, Layers, SlidersHorizontal, Home
+  Key, Globe, Lock, ChevronDown, Gauge, Layers, SlidersHorizontal, Home, Wrench
 } from 'lucide-react';
 import { Can } from '@/hooks/use-permissions';
 import { NotificationsBell } from './notifications-bell';
@@ -39,6 +39,9 @@ const SECTION_ITEMS = [
     { href: '/dashboard/sessions', icon: Globe, label: 'Sessões', resource: 'sessions' },
     { href: '/dashboard/audit', icon: Activity, label: 'Auditoria', resource: 'audit_logs' },
   ]},
+  { label: 'GERADOR', icon: Gauge, items: [
+    { href: '/dashboard/manutencao', icon: Wrench, label: 'Manutenções', resource: 'generator' },
+  ]},
   { label: 'CONFIGURAÇÕES', icon: SlidersHorizontal, items: [
     { href: '/dashboard/settings/appearance', icon: Settings, label: 'Personalização', resource: 'settings' },
     { href: '/dashboard/settings/auth', icon: Key, label: 'Autenticação', resource: 'settings' },
@@ -56,6 +59,7 @@ export function DashboardShell({ user, projectName, primaryColor, logoDarkUrl, l
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     'GERENCIAMENTO': false,
+    'GERADOR': false,
     'CONFIGURAÇÕES': false
   });
 

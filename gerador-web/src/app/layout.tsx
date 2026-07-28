@@ -4,6 +4,15 @@ import "./globals.css";
 import { getThemeConfig } from "@/actions/theme-config";
 import { ThemeWatcher } from "@/components/theme-watcher";
 
+// A CSP nonce is generated per-request in proxy.ts and only gets attached to
+// <script> tags when the page is dynamically rendered (Next.js has no request
+// to read the nonce from during static prerendering). Without this, routes
+// that don't otherwise touch a dynamic API (e.g. /setup, /) get statically
+// optimized at build time and ship with no nonce on any script — every
+// script load is then blocked by the CSP, leaving a blank, non-interactive
+// page. Forcing dynamic rendering here guarantees every route gets a nonce.
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata(): Promise<Metadata> {
   const theme = await getThemeConfig();
   const projectName = theme?.projectName || "AuthForge";

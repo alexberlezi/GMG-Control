@@ -58,6 +58,18 @@ export async function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
   requestHeaders.set('x-nonce', nonce);
 
+  // Like HSTS below, upgrade-insecure-requests only makes sense behind real
+  // HTTPS — it tells the browser to rewrite every same-origin http: request
+  // (including redirect targets, e.g. the /login redirect below) to https:
+  // before dispatching it. Over plain HTTP (local dev) that upgrade points
+  // at a port with no TLS listener, so the rewritten request fails with
+  // ERR_SSL_PROTOCOL_ERROR. `x-forwarded-proto` covers the case where a
+  // reverse proxy (e.g. Nginx Proxy Manager) terminates TLS in front of
+  // this app.
+  const isHttps =
+    request.nextUrl.protocol === 'https:' ||
+    requestHeaders.get('x-forwarded-proto') === 'https';
+
   // CSP: allow fonts from googleapis/gstatic
   const cspHeader = `
     default-src 'self';
@@ -69,7 +81,7 @@ export async function proxy(request: NextRequest) {
     base-uri 'self';
     form-action 'self';
     frame-ancestors 'none';
-    upgrade-insecure-requests;
+    ${isHttps ? 'upgrade-insecure-requests;' : ''}
   `.replace(/\s{2,}/g, ' ').trim();
 
   // Next.js extracts nonce automatically when CSP is in requestHeaders
@@ -89,12 +101,7 @@ export async function proxy(request: NextRequest) {
   // plain HTTP (e.g. local dev, or before a reverse proxy adds TLS) tells
   // the browser to refuse http:// for this origin for up to 2 years,
   // breaking every subsequent request until the browser's HSTS cache for
-  // the host is manually cleared. `x-forwarded-proto` covers the case
-  // where a reverse proxy (e.g. Nginx Proxy Manager) terminates TLS in
-  // front of this app.
-  const isHttps =
-    request.nextUrl.protocol === 'https:' ||
-    requestHeaders.get('x-forwarded-proto') === 'https';
+  // the host is manually cleared.
   if (isHttps) {
     response.headers.set(
       'Strict-Transport-Security',

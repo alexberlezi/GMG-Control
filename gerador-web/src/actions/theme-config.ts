@@ -59,7 +59,13 @@ export const updateThemeConfig = withAuth(async (session, data: any) => {
       { key: 'accentColor', default: '#0EA5E9' }
     ];
 
-    const parsed = ThemeConfigSchema.safeParse(data);
+    // `data` is the client's full config state, seeded from the Prisma record
+    // (getThemeConfig()) — it carries id/createdAt/updatedAt alongside the
+    // editable fields. Those three are DB-managed, never user input, so they
+    // must be stripped before validating against the strict schema below.
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...editableData } = data ?? {};
+
+    const parsed = ThemeConfigSchema.safeParse(editableData);
     if (!parsed.success) {
       return { success: false, error: 'Dados inválidos.' };
     }

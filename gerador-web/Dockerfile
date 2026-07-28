@@ -20,7 +20,12 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x docker-entrypoint.sh && chown -R node:node /app
+# /app/public/uploads is a named-volume mount point (see docker-compose.yml).
+# It must already exist here, owned by node:node, before the volume is first
+# mounted — Docker seeds a new named volume by copying whatever is already at
+# the mount path in the image. Without this, the volume starts out owned by
+# root and the non-root `node` user below can never write into it.
+RUN mkdir -p /app/public/uploads/branding && chmod +x docker-entrypoint.sh && chown -R node:node /app
 USER node
 EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]

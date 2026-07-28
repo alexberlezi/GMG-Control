@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, ShieldCheck, Mail as MailIcon, Activity,
   Settings, UserCircle, Bell, Menu, X, LogOut, Moon, Sun,
-  Key, Globe, Lock, ChevronDown, Gauge, Layers, SlidersHorizontal, Home, Wrench
+  Key, Globe, Lock, ChevronDown, Gauge, Layers, SlidersHorizontal, Home, Wrench, Zap
 } from 'lucide-react';
 import { Can } from '@/hooks/use-permissions';
 import { NotificationsBell } from './notifications-bell';
@@ -40,6 +40,7 @@ const SECTION_ITEMS = [
     { href: '/dashboard/audit', icon: Activity, label: 'Auditoria', resource: 'audit_logs' },
   ]},
   { label: 'GERADOR', icon: Gauge, items: [
+    { href: '/dashboard/gerador', icon: Zap, label: 'Painel do Gerador', resource: 'generator' },
     { href: '/dashboard/manutencao', icon: Wrench, label: 'Manutenções', resource: 'generator' },
   ]},
   { label: 'CONFIGURAÇÕES', icon: SlidersHorizontal, items: [

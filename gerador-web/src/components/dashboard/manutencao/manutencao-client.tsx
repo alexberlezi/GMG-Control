@@ -248,7 +248,7 @@ function ManutencaoModal({
 
           <div>
             <label className="label">Tipo *</label>
-            <select className="input" value={form.tipo} onChange={e => setForm(p => ({ ...p, tipo: e.target.value }))} required>
+            <select className="input" value={form.tipo} onChange={e => setForm(p => ({ ...p, tipo: e.target.value as typeof form.tipo }))} required>
               {TIPOS.map(t => <option key={t} value={t}>{TIPO_LABELS[t]}</option>)}
             </select>
           </div>

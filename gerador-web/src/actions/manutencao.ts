@@ -58,7 +58,7 @@ export const getManutencoes = withPermission('generator:read', async (session) =
   return registros.map(toDetails);
 });
 
-export const createManutencao = withPermission('maintenance:create', async (session, data: ManutencaoInput) => {
+export const createManutencao = withPermission('maintenance:create', async (session, data: ManutencaoInput): Promise<{ success: true; registro: RegistroManutencaoWithDetails } | { success: false; error: string }> => {
   const headersList = await headers();
   const ip = getClientIp(headersList);
   const ua = headersList.get('user-agent') || 'unknown';
@@ -100,7 +100,7 @@ export const createManutencao = withPermission('maintenance:create', async (sess
   return { success: true, registro: toDetails(registro) };
 });
 
-export const updateManutencao = withPermission('maintenance:update', async (session, id: string, data: ManutencaoInput) => {
+export const updateManutencao = withPermission('maintenance:update', async (session, id: string, data: ManutencaoInput): Promise<{ success: true; registro: RegistroManutencaoWithDetails } | { success: false; error: string }> => {
   const headersList = await headers();
   const ip = getClientIp(headersList);
   const ua = headersList.get('user-agent') || 'unknown';

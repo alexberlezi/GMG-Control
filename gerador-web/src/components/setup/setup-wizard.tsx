@@ -43,9 +43,6 @@ interface FormData {
   primaryColor: string;
   defaultTheme: string;
   loginLayout: string;
-  logoLightUrl: string;
-  logoDarkUrl: string;
-  faviconUrl: string;
   skipEmailConfig: boolean;
   emailProvider: string;
   emailApiKey: string;
@@ -88,9 +85,6 @@ export function SetupWizard() {
     primaryColor: '#3B82F6',
     defaultTheme: 'dark',
     loginLayout: 'centered',
-    logoLightUrl: '',
-    logoDarkUrl: '',
-    faviconUrl: '',
     skipEmailConfig: false,
     emailProvider: 'resend',
     emailApiKey: '',
@@ -436,76 +430,10 @@ export function SetupWizard() {
                     </div>
                   </div>
 
-                  {/* Logo & Favicon Uploads */}
-                  <div className="border-t border-outline-variant/20 pt-5">
-                    <label className="label">Logotipos & Favicon</label>
-                    <p className="text-xs text-on-surface-variant mb-3">Formatos aceitos: PNG, JPG, SVG, WebP. Máx 2MB.</p>
-                    <div className="grid grid-cols-3 gap-4">
-                      {([
-                        { key: 'logoDarkUrl' as const, label: 'Logo Escuro', desc: 'Para fundo escuro', type: 'logo-dark' },
-                        { key: 'logoLightUrl' as const, label: 'Logo Claro', desc: 'Para fundo claro', type: 'logo-light' },
-                        { key: 'faviconUrl' as const, label: 'Favicon', desc: 'Ícone da aba', type: 'favicon' },
-                      ] as const).map((item) => (
-                        <div key={item.key} className="flex flex-col items-center">
-                          <label
-                            className={`relative w-full aspect-[3/2] rounded-xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center gap-1 overflow-hidden group ${
-                              form[item.key]
-                                ? 'border-primary/50 bg-primary/5'
-                                : 'border-outline-variant/40 hover:border-outline-variant bg-surface-container-low/30 hover:bg-surface-container-low/50'
-                            }`}
-                          >
-                            {form[item.key] ? (
-                              <>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={form[item.key]}
-                                  alt={item.label}
-                                  className={`max-h-full max-w-[80%] object-contain p-2 ${item.key === 'logoLightUrl' ? 'rounded bg-white/90' : ''}`}
-                                />
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                  <span className="text-xs text-white font-medium">Trocar</span>
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-on-surface-variant/50"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                                <span className="text-[10px] text-on-surface-variant/70">Upload</span>
-                              </>
-                            )}
-                            <input
-                              type="file"
-                              accept="image/png,image/jpeg,image/webp,image/x-icon"
-                              className="absolute inset-0 opacity-0 cursor-pointer"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                if (file.size > 2 * 1024 * 1024) {
-                                  setError('Arquivo muito grande. Máximo 2MB.');
-                                  return;
-                                }
-                                const fd = new FormData();
-                                fd.append('file', file);
-                                fd.append('type', item.type);
-                                try {
-                                  const res = await fetch('/api/setup/upload', { method: 'POST', body: fd });
-                                  const data = await res.json();
-                                  if (data.url) {
-                                    updateField(item.key, data.url);
-                                    setError('');
-                                  } else {
-                                    setError(data.error || 'Erro no upload');
-                                  }
-                                } catch {
-                                  setError('Erro ao enviar arquivo');
-                                }
-                              }}
-                            />
-                          </label>
-                          <span className="text-xs font-medium text-on-surface mt-2">{item.label}</span>
-                          <span className="text-[10px] text-on-surface-variant">{item.desc}</span>
-                        </div>
-                      ))}
-                    </div>
+                  {/* Note: Branding uploads can be configured later in admin panel */}
+                  <div className="alert alert-info border-l-4 border-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <span className="text-sm">Logotipos e favicon podem ser configurados após o setup no painel admin.</span>
                   </div>
                 </div>
               )}

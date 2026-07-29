@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, ShieldCheck, Mail as MailIcon, Activity,
   Settings, UserCircle, Bell, Menu, X, LogOut, Moon, Sun,
-  Key, Globe, Lock, ChevronDown, Gauge, Layers, SlidersHorizontal, Home, Wrench, Power, History
+  Key, Globe, Lock, ChevronDown, Gauge, Layers, SlidersHorizontal, Home, Wrench
 } from 'lucide-react';
 import { Can } from '@/hooks/use-permissions';
 import { NotificationsBell } from './notifications-bell';
@@ -32,17 +32,15 @@ const DIRECT_ITEMS = [
 ];
 
 const SECTION_ITEMS = [
-  { label: 'GERADOR', icon: Gauge, items: [
-    { href: '/dashboard/gerador/controle', icon: Power, label: 'Controle', resource: 'generator' },
-    { href: '/dashboard/gerador/historico', icon: History, label: 'Histórico', resource: 'generator' },
-    { href: '/dashboard/manutencao', icon: Wrench, label: 'Manutenções', resource: 'generator' },
-  ]},
   { label: 'GERENCIAMENTO', icon: Layers, items: [
     { href: '/dashboard/users', icon: Users, label: 'Usuários', resource: 'users' },
     { href: '/dashboard/roles', icon: ShieldCheck, label: 'Grupos', resource: 'roles' },
     { href: '/dashboard/invites', icon: MailIcon, label: 'Convites', resource: 'invites' },
     { href: '/dashboard/sessions', icon: Globe, label: 'Sessões', resource: 'sessions' },
     { href: '/dashboard/audit', icon: Activity, label: 'Auditoria', resource: 'audit_logs' },
+  ]},
+  { label: 'GERADOR', icon: Gauge, items: [
+    { href: '/dashboard/manutencao', icon: Wrench, label: 'Manutenções', resource: 'generator' },
   ]},
   { label: 'CONFIGURAÇÕES', icon: SlidersHorizontal, items: [
     { href: '/dashboard/settings/appearance', icon: Settings, label: 'Personalização', resource: 'settings' },
@@ -60,8 +58,8 @@ export function DashboardShell({ user, projectName, primaryColor, logoDarkUrl, l
   const [mounted, setMounted] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    'GERADOR': false,
     'GERENCIAMENTO': false,
+    'GERADOR': false,
     'CONFIGURAÇÕES': false
   });
 

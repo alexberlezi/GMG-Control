@@ -51,6 +51,7 @@ model User {
   loginAttempts LoginAttempt[]
   invitesSent Invite[] @relation("InvitesSent")
   manutencoesRegistradas RegistroManutencao[]
+  operacoes   RegistroOperacao[]
 
   @@index([email])
   @@index([ldapDn])
@@ -492,4 +493,35 @@ model AnexoManutencao {
   registroManutencao RegistroManutencao @relation(fields: [registroManutencaoId], references: [id], onDelete: Cascade)
 
   @@index([registroManutencaoId])
+}
+
+// ═══════════════════════════════════════
+// GERADOR — OPERAÇÃO
+// ═══════════════════════════════════════
+
+enum MotivoOperacao {
+  CICLO_SEMANAL
+  MANUTENCAO
+  FALTA_ENERGIA
+  TESTE
+  MANUAL
+  OUTRO
+}
+
+model RegistroOperacao {
+  id               String          @id @default(cuid())
+  dataHoraInicio   DateTime
+  dataHoraFim      DateTime?
+  tempoOperacao    Int?            // em minutos, calculado ao desligar
+  combustivelUsado Decimal?        // em litros
+  motivo           MotivoOperacao
+  observacoes      String?
+  usuarioId        String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  usuario User? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([dataHoraInicio])
+  @@index([motivo])
 }

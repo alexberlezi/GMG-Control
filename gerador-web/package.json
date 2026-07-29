@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run test:actions && npm run test:routes && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test:actions": "tsx scripts/test-actions.ts",

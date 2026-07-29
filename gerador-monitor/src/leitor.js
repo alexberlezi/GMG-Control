@@ -17,8 +17,10 @@ function decodificarTelemetria({ regStatus, regMotor, regRede, regGerador, regSt
     // regMotor.data[1] (endereço 1025), não data[2] (1026): validado contra o valor real
     // (56°C) mostrado no sistema de operação remota do gerador — 1026 sempre retorna 32767
     // (esse sim é um sensor realmente ausente, provavelmente pressão de óleo).
+    // Filtro: 32765 e 65535 são valores de erro/overflow; valores < 34°C estão fora do range
+    // válido do sensor (limite mínimo confirmado em produção).
     const temperatura = regMotor.data[1];
-    const temperaturaC = (temperatura === 32767 || temperatura === 65535) ? null : temperatura;
+    const temperaturaC = (temperatura === 32765 || temperatura === 32767 || temperatura === 65535 || temperatura < 34) ? null : temperatura;
 
     let combustivel = regMotor.data[3];
     if (combustivel === 65535) combustivel = 0;

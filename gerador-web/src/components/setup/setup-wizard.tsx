@@ -487,7 +487,7 @@ export function SetupWizard() {
                                 fd.append('file', file);
                                 fd.append('type', item.type);
                                 try {
-                                  const res = await fetch('/api/uploads', { method: 'POST', body: fd });
+                                  const res = await fetch('/api/setup/upload', { method: 'POST', body: fd });
                                   const data = await res.json();
                                   if (data.url) {
                                     updateField(item.key, data.url);

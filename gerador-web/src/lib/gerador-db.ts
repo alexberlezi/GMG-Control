@@ -31,6 +31,15 @@ export interface HistoricoGeradorPonto {
   temperatura: number | null;
   rpm: number | null;
   combustivel: number | null;
+  rede_volts_l1: number | null;
+  rede_volts_l2: number | null;
+  rede_volts_l3: number | null;
+  gerador_volts_l1: number | null;
+  gerador_volts_l2: number | null;
+  gerador_volts_l3: number | null;
+  gerador_amps_l1: number | null;
+  gerador_amps_l2: number | null;
+  gerador_amps_l3: number | null;
 }
 
 export type Periodo = '24h' | '7d' | '30d' | '90d';
@@ -124,7 +133,16 @@ export async function getHistoricoGerador(periodo: Periodo): Promise<HistoricoGe
         time_bucket('5 minutes', time) AS bucket,
         AVG(NULLIF(temperatura_c, 32765)) AS temperatura,
         AVG(rpm) AS rpm,
-        AVG(combustivel_pct) AS combustivel
+        AVG(combustivel_pct) AS combustivel,
+        AVG(rede_volts_l1) AS rede_volts_l1,
+        AVG(rede_volts_l2) AS rede_volts_l2,
+        AVG(rede_volts_l3) AS rede_volts_l3,
+        AVG(gerador_volts_l1) AS gerador_volts_l1,
+        AVG(gerador_volts_l2) AS gerador_volts_l2,
+        AVG(gerador_volts_l3) AS gerador_volts_l3,
+        AVG(gerador_amps_l1) AS gerador_amps_l1,
+        AVG(gerador_amps_l2) AS gerador_amps_l2,
+        AVG(gerador_amps_l3) AS gerador_amps_l3
       FROM leituras
       WHERE time > NOW() - INTERVAL '${interval}'
         AND temperatura_c NOT IN (32765, 32767, 65535)
@@ -135,7 +153,16 @@ export async function getHistoricoGerador(periodo: Periodo): Promise<HistoricoGe
       bucket AS tempo,
       temperatura,
       rpm,
-      combustivel
+      combustivel,
+      rede_volts_l1,
+      rede_volts_l2,
+      rede_volts_l3,
+      gerador_volts_l1,
+      gerador_volts_l2,
+      gerador_volts_l3,
+      gerador_amps_l1,
+      gerador_amps_l2,
+      gerador_amps_l3
     FROM tempo_bucketed
     ORDER BY tempo ASC
     `
@@ -146,5 +173,14 @@ export async function getHistoricoGerador(periodo: Periodo): Promise<HistoricoGe
     temperatura: row.temperatura ? Math.round(row.temperatura * 10) / 10 : null,
     rpm: row.rpm ? Math.round(row.rpm) : null,
     combustivel: row.combustivel ? Math.round(row.combustivel) : null,
+    rede_volts_l1: row.rede_volts_l1 ? Math.round(row.rede_volts_l1) : null,
+    rede_volts_l2: row.rede_volts_l2 ? Math.round(row.rede_volts_l2) : null,
+    rede_volts_l3: row.rede_volts_l3 ? Math.round(row.rede_volts_l3) : null,
+    gerador_volts_l1: row.gerador_volts_l1 ? Math.round(row.gerador_volts_l1) : null,
+    gerador_volts_l2: row.gerador_volts_l2 ? Math.round(row.gerador_volts_l2) : null,
+    gerador_volts_l3: row.gerador_volts_l3 ? Math.round(row.gerador_volts_l3) : null,
+    gerador_amps_l1: row.gerador_amps_l1 ? Math.round(row.gerador_amps_l1 * 10) / 10 : null,
+    gerador_amps_l2: row.gerador_amps_l2 ? Math.round(row.gerador_amps_l2 * 10) / 10 : null,
+    gerador_amps_l3: row.gerador_amps_l3 ? Math.round(row.gerador_amps_l3 * 10) / 10 : null,
   }));
 }

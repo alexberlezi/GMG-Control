@@ -493,3 +493,49 @@ model AnexoManutencao {
 
   @@index([registroManutencaoId])
 }
+
+// ═══════════════════════════════════════
+// ALARMES DO GERADOR
+// ═══════════════════════════════════════
+
+enum NivelAlarme {
+  CRITICO
+  AVISO
+  INFO
+}
+
+enum TipoAlarme {
+  TEMPERATURA_ALTA
+  TEMPERATURA_SENSOR_ERRO
+  COMBUSTIVEL_BAIXO
+  BATERIA_BAIXA
+  FREQUENCIA_FORA_ESPECIFICACAO
+  TENSAO_REDE_FORA_ESPECIFICACAO
+  TENSAO_GERADOR_FORA_ESPECIFICACAO
+  CORRENTE_ALTA
+  FALHA_REDE
+  MANUTENCAO_NECESSARIA
+  SENSOR_ERRO
+  OUTRO
+}
+
+model AlarmeGerador {
+  id          String       @id @default(cuid())
+  tipo        TipoAlarme
+  nivel       NivelAlarme
+  titulo      String
+  descricao   String?
+  valor       Decimal?     // valor que acionou o alarme (ex: temperatura 85°C)
+  unidade     String?      // unidade do valor (ex: °C)
+  acionadoEm  DateTime
+  resolvido   Boolean      @default(false)
+  resolvidoEm DateTime?
+  notas       String?      // notas de resolução
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([acionadoEm])
+  @@index([tipo])
+  @@index([nivel])
+  @@index([resolvido])
+}

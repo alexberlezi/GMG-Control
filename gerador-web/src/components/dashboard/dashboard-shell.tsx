@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, ShieldCheck, Mail as MailIcon, Activity,
   Settings, UserCircle, Bell, Menu, X, LogOut, Moon, Sun,
-  Key, Globe, Lock, ChevronDown, Gauge, Layers, SlidersHorizontal, Home, Wrench, Power, History, BarChart3
+  Key, Globe, Lock, ChevronDown, Gauge, Layers, SlidersHorizontal, Home, Wrench, Power, History, BarChart3, AlertTriangle
 } from 'lucide-react';
 import { Can } from '@/hooks/use-permissions';
 import { NotificationsBell } from './notifications-bell';
@@ -36,6 +36,7 @@ const SECTION_ITEMS = [
     { href: '/dashboard/gerador', icon: BarChart3, label: 'Painel', resource: 'generator' },
     { href: '/dashboard/gerador/controle', icon: Power, label: 'Controle', resource: 'generator' },
     { href: '/dashboard/gerador/historico', icon: History, label: 'Histórico', resource: 'generator' },
+    { href: '/dashboard/gerador/alarmes', icon: AlertTriangle, label: 'Alarmes', resource: 'generator' },
     { href: '/dashboard/manutencao', icon: Wrench, label: 'Manutenções', resource: 'generator' },
   ]},
   { label: 'GERENCIAMENTO', icon: Layers, items: [

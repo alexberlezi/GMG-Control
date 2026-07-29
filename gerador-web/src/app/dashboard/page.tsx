@@ -1,12 +1,15 @@
 import { db } from '@/lib/db';
 import { validateSession } from '@/lib/auth/session';
-import { Users, ShieldCheck, Activity, Globe } from 'lucide-react';
+import { Users, ShieldCheck, Activity, Globe, AlertTriangle, Gauge, Wrench } from 'lucide-react';
+import { getUltimaLeitura } from '@/lib/gerador-db';
+import { getDashboardSummary } from '@/lib/gerador-utils';
+import Link from 'next/link';
 
 export default async function DashboardPage() {
   const session = await validateSession();
   if (!session) return null;
 
-  const [totalUsers, totalSessions, recentLogins, recentAuditLogs] = await Promise.all([
+  const [totalUsers, totalSessions, recentLogins, recentAuditLogs, geradorLeitura, geradorSummary] = await Promise.all([
     db.user.count(),
     db.session.count({ where: { expiresAt: { gt: new Date() } } }),
     db.loginAttempt.count({
@@ -17,6 +20,8 @@ export default async function DashboardPage() {
       orderBy: { createdAt: 'desc' },
       include: { user: { select: { name: true, email: true } } },
     }),
+    getUltimaLeitura().catch(() => null),
+    getDashboardSummary().catch(() => null),
   ]);
 
   const stats = [
@@ -51,6 +56,136 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Gerador Summary Section */}
+      {geradorLeitura && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-on-surface flex items-center gap-2">
+              <Gauge size={20} />
+              Resumo do Gerador
+            </h2>
+            <Link href="/dashboard/gerador" className="text-sm text-primary hover:text-primary/80">
+              Ver painel completo →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Status Motor */}
+            <div className={`card p-5 border-l-4 ${
+              geradorLeitura.motor_status === 'Rodando'
+                ? 'border-green-500 bg-green-50/10 dark:bg-green-950/20'
+                : 'border-red-500 bg-red-50/10 dark:bg-red-950/20'
+            }`}>
+              <p className="text-xs text-on-surface-variant uppercase tracking-wide font-medium">Status Motor</p>
+              <p className={`text-2xl font-bold mt-2 ${
+                geradorLeitura.motor_status === 'Rodando'
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-red-600 dark:text-red-400'
+              }`}>
+                {geradorLeitura.motor_status === 'Rodando' ? '🟢 Rodando' : '🔴 Parado'}
+              </p>
+            </div>
+
+            {/* Combustível */}
+            <div className="card p-5 border-l-4 border-orange-500 bg-orange-50/10 dark:bg-orange-950/20">
+              <p className="text-xs text-on-surface-variant uppercase tracking-wide font-medium">Combustível</p>
+              <p className="text-2xl font-bold text-on-surface mt-2">{geradorLeitura.nivel_combustivel ?? '—'}%</p>
+            </div>
+
+            {/* Temperatura */}
+            <div className={`card p-5 border-l-4 ${
+              geradorLeitura.temperatura_invalida
+                ? 'border-yellow-500 bg-yellow-50/10 dark:bg-yellow-950/20'
+                : 'border-blue-500 bg-blue-50/10 dark:bg-blue-950/20'
+            }`}>
+              <p className="text-xs text-on-surface-variant uppercase tracking-wide font-medium">Temperatura</p>
+              <p className={`text-2xl font-bold mt-2 ${
+                geradorLeitura.temperatura_invalida
+                  ? 'text-yellow-600 dark:text-yellow-400'
+                  : 'text-on-surface'
+              }`}>
+                {geradorLeitura.temperatura_invalida ? '⚠️ Erro' : `${geradorLeitura.temperatura}°C`}
+              </p>
+            </div>
+
+            {/* Alarmes */}
+            {geradorSummary && (
+              <div className={`card p-5 border-l-4 ${
+                geradorSummary.alarmesCriticos > 0
+                  ? 'border-red-500 bg-red-50/10 dark:bg-red-950/20'
+                  : 'border-green-500 bg-green-50/10 dark:bg-green-950/20'
+              }`}>
+                <p className="text-xs text-on-surface-variant uppercase tracking-wide font-medium">Alarmes</p>
+                <p className={`text-2xl font-bold mt-2 ${
+                  geradorSummary.alarmesCriticos > 0
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-green-600 dark:text-green-400'
+                }`}>
+                  {geradorSummary.alarmesCriticos > 0 ? '⚠️ ' + geradorSummary.alarmesCriticos : '✓ Limpo'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Gerador Info */}
+          {geradorSummary && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Último Abastecimento */}
+              <div className="card p-5 border-l-4 border-blue-500 bg-blue-50/10 dark:bg-blue-950/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-blue-600 dark:text-blue-400">⛽</span>
+                  <p className="text-xs text-on-surface-variant uppercase tracking-wide font-medium">Último Abastecimento</p>
+                </div>
+                {geradorSummary.ultimoAbastecimento ? (
+                  <>
+                    <p className="text-lg font-semibold text-on-surface">
+                      {geradorSummary.ultimoAbastecimento.quantidade}{geradorSummary.ultimoAbastecimento.unidade ? ' ' + geradorSummary.ultimoAbastecimento.unidade : ''}
+                    </p>
+                    <p className="text-xs text-on-surface-variant mt-2">
+                      {new Date(geradorSummary.ultimoAbastecimento.data).toLocaleDateString('pt-BR')}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-on-surface-variant">Sem registro</p>
+                )}
+              </div>
+
+              {/* Última Manutenção */}
+              <div className="card p-5 border-l-4 border-green-500 bg-green-50/10 dark:bg-green-950/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <Wrench size={16} className="text-green-600 dark:text-green-400" />
+                  <p className="text-xs text-on-surface-variant uppercase tracking-wide font-medium">Última Manutenção</p>
+                </div>
+                {geradorSummary.ultimaManutencao ? (
+                  <>
+                    <p className="text-lg font-semibold text-on-surface">{geradorSummary.ultimaManutencao.tipo}</p>
+                    <p className="text-xs text-on-surface-variant mt-2">
+                      {new Date(geradorSummary.ultimaManutencao.data).toLocaleDateString('pt-BR')}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-on-surface-variant">Sem registro</p>
+                )}
+              </div>
+
+              {/* Alarmes Info */}
+              <div className="card p-5 border-l-4 border-yellow-500 bg-yellow-50/10 dark:bg-yellow-950/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle size={16} className="text-yellow-600 dark:text-yellow-400" />
+                  <p className="text-xs text-on-surface-variant uppercase tracking-wide font-medium">Avisos</p>
+                </div>
+                <p className="text-lg font-semibold text-on-surface">
+                  {geradorSummary.alarmesCriticos + geradorSummary.alarmesAvisos}
+                </p>
+                <p className="text-xs text-on-surface-variant mt-2">
+                  {geradorSummary.alarmesCriticos} críticos • {geradorSummary.alarmesAvisos} avisos
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Recent Activity */}
       <div className="card">

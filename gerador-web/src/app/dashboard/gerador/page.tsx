@@ -7,8 +7,11 @@ import {
   PERIODOS_VALIDOS,
   type Periodo,
 } from '@/lib/gerador-db';
+import { getDashboardSummary, getAlarmes } from '@/lib/gerador-utils';
 import { GeradorStatusCards } from '@/components/dashboard/gerador/gerador-status-cards';
 import { GeradorHistoryChart } from '@/components/dashboard/gerador/gerador-history-chart';
+import { GeradorSummaryCards } from '@/components/dashboard/gerador/gerador-summary-cards';
+import { GeradorAlarmesList } from '@/components/dashboard/gerador/gerador-alarmes-list';
 import { PeriodoSelector } from '@/components/dashboard/gerador/periodo-selector';
 import { AlertTriangle, ServerCrash } from 'lucide-react';
 
@@ -33,10 +36,14 @@ export default async function GeradorPage({
 
   let leitura;
   let historico;
+  let summary;
+  let alarmes;
   try {
-    [leitura, historico] = await Promise.all([
+    [leitura, historico, summary, alarmes] = await Promise.all([
       getUltimaLeitura(),
       getHistoricoGerador(periodo),
+      getDashboardSummary(),
+      getAlarmes({ limite: 10 }),
     ]);
   } catch (error) {
     console.error('[GeradorPage] Falha ao consultar banco de telemetria:', error);
@@ -82,6 +89,10 @@ export default async function GeradorPage({
       )}
 
       {leitura && <GeradorStatusCards leitura={leitura} />}
+
+      {summary && <GeradorSummaryCards summary={summary} />}
+
+      {alarmes && alarmes.length > 0 && <GeradorAlarmesList alarmes={alarmes} />}
 
       <div className="card p-5 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
